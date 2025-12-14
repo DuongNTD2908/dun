@@ -1,0 +1,130 @@
+/* Modal base */
+#login-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 1200;
+    font-family: inherit;
+}
+
+#login-modal.active {
+    display: block;
+}
+
+#login-modal .overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(2px);
+}
+
+#login-modal .dialog {
+    position: relative;
+    z-index: 2;
+    max-width: 460px;
+    margin: 24vh auto;
+    background: #fff;
+    border-radius: 10px;
+    padding: 22px;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
+}
+
+#login-modal .dialog h3 {
+    margin: 0 0 25px;
+    font-size: 30px;
+    text-align: center;
+    font-weight: 700;
+    color: #111;
+}
+
+#login-modal label {
+    display: block;
+    font-size: 16px;
+    margin: 10px 0 4px;
+    color: #333;
+    left: 10px;
+}
+
+#login-modal input[type="text"],
+#login-modal input[type="password"],
+#login-modal input[type="email"] {
+    width: 100%;
+    padding: 22px 10px 6px 10px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    box-sizing: border-box;
+}
+
+#login-modal .input-form input:focus {
+    outline: none;
+    border: 2px solid #0078d4;
+}
+
+#login-modal .row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 10px;
+}
+
+#login-modal .controls {
+    display: flex;
+    gap: 8px;
+    margin-top: 14px;
+    justify-content: flex-end;
+}
+
+#login-modal .controls .btn {
+    width: 100%;
+    padding: 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    border: 1px solid transparent;
+}
+
+#login-modal .controls .primary {
+    background: #0078d4;
+    color: #fff;
+    transition: all 0.2s;
+}
+
+#login-modal .controls .primary:hover {
+    background: #005a9e;
+}
+
+#login-modal .controls .ghost {
+    background: transparent;
+    color: #333;
+    border-color: #ccc;
+}
+
+#login-modal .close-btn {
+    position: absolute;
+    right: 10px;
+    top: 8px;
+    border: none;
+    background: transparent;
+    font-size: 20px;
+    cursor: pointer;
+}
+
+#login-modal .input-form {
+    position: relative;
+    margin-bottom: 12px;
+}
+
+#login-modal label {
+    position: absolute;
+    transition: all 0.2s;
+}
+
+#login-modal input {
+    padding: 5px 10px;
+    transition: all 0.2s;
+}
+
+@media (max-width:420px) {
+    #login-modal .dialog {
+        margin: 4vh 12px;
+    }
+}

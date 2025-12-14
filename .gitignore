@@ -1,0 +1,26 @@
+# DunWeb/
+/vendor
+/config/
+/node_modules
+
+# Laravel-specific ignores
+.env
+.env.backup
+.phpunit.result.cache
+/storage
+/bootstrap/cache
+/public/hot
+/public/storage
+/public/build
+/public/css
+/public/js
+
+# OS and editor ignores
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.suo
+*.user
+*.bak
+*.log
