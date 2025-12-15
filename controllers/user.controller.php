@@ -287,7 +287,26 @@ switch ($action) {
         $phone = $_POST['phone'];
         $date = $_POST['date'];
         $gender = $_POST['gender'];
-        $userModel->updateUser($id, $name, $email, $phone, $date, $gender);
+        
+        $avt = null;
+        // Handle Avatar Upload
+        if (isset($_FILES['avatar']) && $_FILES['avatar']['error'] === UPLOAD_ERR_OK) {
+            $tmpName = $_FILES['avatar']['tmp_name'];
+            $fileName = basename($_FILES['avatar']['name']);
+            $fileExt = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+            $allowed = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+            
+            if (in_array($fileExt, $allowed)) {
+                $newFileName = 'user_' . $id . '_' . time() . '.' . $fileExt;
+                $uploadDir = '../src/img/';
+                if (move_uploaded_file($tmpName, $uploadDir . $newFileName)) {
+                    $avt = 'src/img/' . $newFileName;
+                    $_SESSION['avt'] = $avt; // Update session immediately
+                }
+            }
+        }
+
+        $userModel->updateUser($id, $name, $email, $phone, $date, $gender, $avt);
         echo "<script>alert('Cập nhật thành công');</script>";
         break;
 

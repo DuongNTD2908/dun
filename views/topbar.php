@@ -1,13 +1,16 @@
 <?php if (session_status() === PHP_SESSION_NONE) session_start(); ?>
 <header class="topbar">
-    <div class="brand">DUN</div>
+    <div class="brand">
+        DUN
+        <div class="brand-snow"></div>
+    </div>
     <div class="nav">
-        <a href="index.php">Trang chủ</a>
+        <a href="index.php"><i class="fa fa-home"></i> <span>Trang chủ</span></a>
         <!-- <a href="#">Bạn bè</a> -->
         <?php if (isset($_SESSION['user_id'])): ?>
-            <a href="message.php">Nhắn tin</a>
+            <a href="message.php"><i class="fa fa-comment"></i> <span>Nhắn tin</span></a>
         <?php else: ?>
-            <a onclick="alert('Hãy đăng nhập trước')" style="cursor: pointer;" class="btn-login">Nhắn tin</a>
+            <a onclick="alert('Hãy đăng nhập trước')" style="cursor: pointer;" class="btn-login"><i class="fa fa-comment"></i> <span>Nhắn tin</span></a>
         <?php endif ?>
     </div>
     <div class="search">
@@ -49,27 +52,39 @@
                     $display = (strlen($uname) > 8) ? substr($uname, 0, 8) . '...' : $uname;
                 }
                 echo htmlspecialchars($display, ENT_QUOTES, 'UTF-8');
-            ?></p>
+                ?></p>
             <div id="logout" class="icon-nav">
                 <img src="src/img/logout.png" alt="" width="100%">
             </div>
         <?php endif ?>
     </nav>
 </header>
-<div id="notification-nav" style="display:none;">
-    <div>
-        <h3 style="text-align: center;">Thông báo</h3>
+
+<!-- Notification Dropdown -->
+<div id="notification-nav" class="notification-dropdown">
+    <div class="notification-header">
+        <h3>Thông báo</h3>
     </div>
-    <div id="notification-list" style="max-height:300px; overflow-y:auto; padding:10px;">
+    <div id="notification-list" class="notification-list">
         <!-- Thông báo sẽ được load ở đây -->
     </div>
-
 </div>
+
 <script>
     function loadNotifications() {
         const notificationList = document.getElementById('notification-list');
-        console.log('[topbar] loadNotifications called');
-        // correct controller path (controllers, not controller) and send credentials
+        notificationList.innerHTML = '<div class="loading-spinner"></div>';
+
+        // Định nghĩa hàm escapeHtml cục bộ để tránh lỗi ReferenceError
+        function escapeHtml(text) {
+            return String(text)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
         fetch('controllers/notification.controller.php?action=list', {
                 credentials: 'same-origin'
             })
@@ -88,39 +103,51 @@
                 notificationList.innerHTML = '';
                 if (data && data.ok && Array.isArray(data.data) && data.data.length > 0) {
                     data.data.forEach(noti => {
-                        const p = document.createElement('p');
+                        const div = document.createElement('div');
+                        div.className = 'notification-item';
                         const text = (noti.content || '').toString();
-                        p.textContent = text + (noti.created_at ? (' (' + noti.created_at + ')') : '');
-                        notificationList.appendChild(p);
+                        const time = noti.created_at ? noti.created_at : '';
+                        // Sử dụng cộng chuỗi thay vì template literal để tránh lỗi hiển thị trong editor PHP
+                        div.innerHTML = '<p>' + text + '</p><div class="time">' + time + '</div>';
+                        notificationList.appendChild(div);
                     });
                 } else if (data && data.ok && Array.isArray(data.data) && data.data.length === 0) {
-                    notificationList.innerHTML = '<p>Không có thông báo nào</p>';
+                    notificationList.innerHTML = '<div style="padding:20px;text-align:center;color:#65676b">Không có thông báo nào</div>';
                 } else if (data && data.ok === false && data.msg) {
-                    notificationList.innerHTML = '<p>' + (data.msg || 'Không thể tải thông báo') + '</p>';
+                    notificationList.innerHTML = '<div style="padding:20px;text-align:center;color:red">' + (data.msg || 'Không thể tải thông báo') + '</div>';
                 } else {
-                    notificationList.innerHTML = '<p>Không có thông báo nào</p>';
+                    notificationList.innerHTML = '<div style="padding:20px;text-align:center;color:#65676b">Không có thông báo nào</div>';
                 }
             })
             .catch(err => {
                 console.error(err);
                 // if we already wrote raw response, don't overwrite; otherwise show generic error
-                if (!notificationList.innerHTML) notificationList.innerHTML = '<p>Lỗi tải thông báo</p>';
+                // Kiểm tra nếu vẫn đang loading hoặc rỗng thì mới báo lỗi
+                if (notificationList.innerHTML.indexOf('loading-spinner') !== -1 || notificationList.innerHTML === '') {
+                    notificationList.innerHTML = '<div style="padding:20px;text-align:center;color:red">Lỗi tải thông báo</div>';
+                }
             });
     }
 
-    // Toggle notification panel when bell icon is clicked and load notifications lazily
+    // Toggle notification panel
     (function() {
         const notifBtn = document.getElementById('notif');
         const notificationNav = document.getElementById('notification-nav');
         if (!notifBtn || !notificationNav) return;
 
-        notifBtn.addEventListener('mouseenter', function(e) {
-            // toggle visibility
-            if (notificationNav.style.display === 'block') {
-                notificationNav.style.display = 'none';
-            } else {
-                notificationNav.style.display = 'block';
+        // Use click instead of mouseenter for better UX
+        notifBtn.addEventListener('click', function(e) {
+            e.stopPropagation(); // prevent closing immediately
+            notificationNav.classList.toggle('active');
+            if (notificationNav.classList.contains('active')) {
                 loadNotifications();
+            }
+        });
+
+        // Close when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!notificationNav.contains(e.target) && !notifBtn.contains(e.target)) {
+                notificationNav.classList.remove('active');
             }
         });
     })();
@@ -152,56 +179,20 @@
         });
     })();
 </script>
-<style>
-    /* simple dropdown for recent searches */
-    .search-dropdown {
-        position: absolute;
-        background: #fff;
-        border: 1px solid #ddd;
-        box-shadow: 0 6px 20px rgba(0, 0, 0, .08);
-        border-radius: 6px;
-        z-index: 1200;
-        min-width: 220px;
-        max-width: 380px;
-    }
-
-    .search-dropdown ul {
-        list-style: none;
-        margin: 0;
-        padding: 8px 0;
-    }
-
-    .search-dropdown li {
-        padding: 8px 12px;
-        cursor: pointer;
-        font-size: 14px;
-        color: #222
-    }
-
-    .search-dropdown li:hover {
-        background: #f5f7fa
-    }
-
-    .search-dropdown .meta {
-        display: block;
-        font-size: 12px;
-        color: #888
-    }
-</style>
 <script src="src/js/search.js"></script>
 <div class="post-controller">
     <div id="btn-post" class="btn-primary">
-        <img src="src/img/post.png" alt="" width="20%">
+        <img src="src/img/post.png" alt="" width="10%">
         <span>Post</span>
     </div>
-        <?php if (!empty($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
-            <div id="btn-admin-panel" class="btn-primary" title="Admin">
-                <a href="admin_manager.php" style="display:flex;align-items:center;gap:8px;color:inherit;text-decoration:none;">
-                    <img src="src/img/user.png" alt="" width="20%">
-                    <span>Admin</span>
-                </a>
-            </div>
-        <?php endif; ?>
+    <?php if (!empty($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
+        <div id="btn-admin-panel" class="btn-primary" title="Admin">
+            <a href="admin_manager.php" style="display:flex;align-items:center;gap:8px;color:inherit;text-decoration:none;">
+                <img src="src/img/user.png" alt="" width="10%">
+                <span>Admin</span>
+            </a>
+        </div>
+    <?php endif; ?>
 </div>
 <div id="login-modal" aria-hidden="true">
     <div class="overlay" data-action="close"></div>
@@ -284,14 +275,14 @@
                     <label for="pf-dob">Ngày sinh</label>
                     <input id="pf-dob" name="dob" type="date" />
                 </div>
-                <div style="text-align:right;margin-top:10px;">
-                    <button id="pf-next" class="btn primary" disabled>Next</button>
+                <div class="form-actions">
+                    <button id="pf-next" class="btn primary" disabled>Tiếp tục</button>
                 </div>
             </div>
-            <div id="profile-step-2" style="display:none;text-align:center;">
+            <div id="profile-step-2" style="display:none;">
                 <h3>Chào mừng bạn <?php echo htmlspecialchars($_SESSION['name']); ?>!</h3>
                 <p>Hãy bắt đầu nào 🎉</p>
-                <div style="margin-top:12px;">
+                <div class="form-actions">
                     <button id="pf-finish" class="btn primary">Bắt đầu</button>
                 </div>
             </div>
@@ -308,6 +299,7 @@
             align-items: center;
             justify-content: center;
             z-index: 2000;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
         }
 
         #profile-modal .overlay {
@@ -316,35 +308,109 @@
             top: 0;
             width: 100%;
             height: 100%;
-            background: #00000099;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
         }
 
         #profile-modal .dialog {
             position: relative;
             background: #fff;
-            padding: 24px;
-            border-radius: 12px;
-            width: 400px;
-            box-shadow: 0 6px 30px #00000033;
+            padding: 32px;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 420px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+            transform: translateY(0);
+            animation: modalFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes modalFadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        #profile-modal h3 {
+            margin: 0 0 8px;
+            font-size: 24px;
+            color: #111;
+            text-align: center;
+            font-weight: 700;
+        }
+
+        #profile-modal p {
+            margin: 0 0 24px;
+            color: #666;
+            font-size: 14px;
+            text-align: center;
+            line-height: 1.5;
         }
 
         #profile-modal .input-form {
-            margin-bottom: 10px;
+            margin-bottom: 16px;
             text-align: left;
         }
 
         #profile-modal label {
             display: block;
-            font-size: 13px;
-            margin-bottom: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
         }
 
         #profile-modal input,
         #profile-modal select {
             width: 100%;
-            padding: 8px;
-            border-radius: 6px;
+            padding: 12px;
+            border-radius: 8px;
             border: 1px solid #ddd;
+            font-size: 15px;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            background: #f9f9f9;
+            box-sizing: border-box;
+        }
+
+        #profile-modal input:focus,
+        #profile-modal select:focus {
+            outline: none;
+            border-color: #0078d4;
+            background: #fff;
+            box-shadow: 0 0 0 3px rgba(0, 120, 212, 0.1);
+        }
+
+        #profile-modal .form-actions {
+            margin-top: 24px;
+        }
+
+        #profile-modal .btn.primary {
+            width: 100%;
+            padding: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            border-radius: 8px;
+            background: #0078d4;
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+        }
+
+        #profile-modal .btn.primary:hover {
+            background: #006cbd;
+        }
+
+        #profile-modal .btn.primary:active {
+            transform: scale(0.98);
+        }
+
+        #profile-modal .btn.primary:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        #profile-step-2 {
+            text-align: center;
         }
     </style>
     <script>

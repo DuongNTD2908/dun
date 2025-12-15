@@ -12,7 +12,7 @@ require_once __DIR__ . '/config/session.php';
     <link rel="shortcut icon" href="src/img/logodun.png" type="image/x-icon">
     <link rel="stylesheet" href="src/css/style.css">
     <link rel="stylesheet" href="src/css/login.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
     <script src="/DunWeb/src/js/posts.js"></script>
 </head>
 
@@ -100,6 +100,211 @@ require_once __DIR__ . '/config/session.php';
             </div>
         <?php endif ?>
     </div>
+
+    <!-- Comment Modal -->
+    <div id="comment-modal" class="comment-modal">
+        <div class="comment-dialog">
+            <div class="comment-header">
+                <h3>Bình luận</h3>
+                <button class="close-comment" id="close-comment">&times;</button>
+            </div>
+            <div class="comment-body" id="comment-body">
+                <!-- Comments will be loaded here -->
+                <div class="empty-state">
+                    <p>Chưa có bình luận nào. Hãy là người đầu tiên!</p>
+                </div>
+            </div>
+            <div class="comment-footer">
+                <?php if (isset($_SESSION['user_id'])): ?>
+                    <img src="<?php echo !empty($_SESSION['avt']) ? htmlspecialchars($_SESSION['avt']) : 'src/img/user.png'; ?>" class="my-avt">
+                    <div class="input-group">
+                        <input type="text" id="comment-input" placeholder="Viết bình luận...">
+                        <button id="send-comment"><i class="fa fa-paper-plane"></i></button>
+                    </div>
+                <?php else: ?>
+                    <p style="width:100%;text-align:center;"><a href="#" class="btn-login" style="color:#0078d4;text-decoration:none;font-weight:bold;">Đăng nhập</a> để bình luận</p>
+                <?php endif; ?>
+            </div>
+        </div>
+    </div>
+
+    <!-- Welcome Popup -->
+    <div id="welcome-modal" class="welcome-modal">
+        <div class="welcome-content">
+            <img src="src/img/welcome.png" alt="Welcome" class="welcome-img">
+            <div class="welcome-actions">
+                <img src="src/img/fast-forward.png" id="welcome-next" alt="Next" title="Bắt đầu khám phá">
+            </div>
+        </div>
+        <img src="src/img/noel-tree.png" alt="Noel Tree" class="welcome-noel-tree">
+    </div>
+    <style>
+        .welcome-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 108, 202, 1);
+            /* Nền màu nhẹ (AliceBlue) */
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.5s ease, visibility 0.5s;
+        }
+
+        .welcome-modal.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .welcome-content {
+            display: flex;
+            position: relative;
+            z-index: 10;
+            flex-direction: column;
+            align-items: center;
+            transform: scale(0.8);
+            opacity: 0.6;
+            /* Yêu cầu: 0.6 đến 1 */
+            transition: transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.8s ease;
+        }
+
+        .welcome-modal.active .welcome-content {
+            transform: scale(1);
+            opacity: 1;
+        }
+
+        .welcome-modal.closing {
+            opacity: 0;
+        }
+
+        .welcome-modal.closing .welcome-content {
+            transform: scale(1.2);
+            opacity: 0;
+            transition: all 0.4s ease-in;
+        }
+
+        .welcome-img {
+            max-width: 90%;
+            max-height: 50vh;
+            margin-bottom: 30px;
+            filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.1));
+        }
+
+        .welcome-noel-tree {
+            position: absolute;
+            width: 300px;
+            bottom: 0;
+            right: 0;
+        }
+
+        #welcome-next {
+            width: 60px;
+            cursor: pointer;
+            transition: transform 0.3s;
+        }
+
+        #welcome-next:hover {
+            transform: translateX(10px);
+        }
+
+        .snowflake {
+            position: absolute;
+            top: -40px;
+            user-select: none;
+            pointer-events: none;
+            animation: fall linear infinite;
+            z-index: 10000;
+        }
+
+        @keyframes fall {
+            0% {
+                transform: translateY(0) translateX(0);
+                opacity: 1;
+            }
+
+            100% {
+                transform: translateY(110vh) translateX(20px);
+                opacity: 0.3;
+            }
+        }
+    </style>
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            // Kiểm tra session để chỉ hiện 1 lần mỗi phiên
+            if (!sessionStorage.getItem("welcome_seen")) {
+                const modal = document.getElementById("welcome-modal");
+                const nextBtn = document.getElementById("welcome-next");
+
+                // Tạo hiệu ứng tuyết rơi (dấu chấm xanh/trắng)
+                const colors = ['#fff', '#87CEEB', '#00BFFF'];
+                for (let i = 0; i < 60; i++) {
+                    const flake = document.createElement('div');
+                    flake.classList.add('snowflake');
+                    flake.textContent = '.';
+                    flake.style.left = Math.random() * 100 + 'vw';
+                    flake.style.animationDuration = (Math.random() * 3 + 2) + 's';
+                    flake.style.animationDelay = Math.random() * 2 + 's';
+                    flake.style.fontSize = (Math.random() * 30 + 20) + 'px';
+                    flake.style.color = colors[Math.floor(Math.random() * colors.length)];
+                    flake.style.opacity = Math.random();
+                    modal.appendChild(flake);
+                }
+
+                // Hiệu ứng vào
+                setTimeout(() => {
+                    modal.classList.add("active");
+                }, 100);
+
+                // Hiệu ứng thoát
+                nextBtn.addEventListener("click", () => {
+                    modal.classList.remove("active");
+                    modal.classList.add("closing");
+                    setTimeout(() => {
+                        modal.style.display = "none";
+                        sessionStorage.setItem("welcome_seen", "true");
+                    }, 400);
+                });
+            } else {
+                document.getElementById("welcome-modal").style.display = "none";
+            }
+        });
+    </script>
+
+    <script>
+        // Comment Modal Logic
+        (function() {
+            const modal = document.getElementById('comment-modal');
+            const closeBtn = document.getElementById('close-comment');
+            const body = document.body;
+
+            // Event delegation for dynamically loaded posts
+            document.addEventListener('click', function(e) {
+                // Check if clicked element is comment button or inside it
+                const btn = e.target.closest('.comment-btn');
+                if (btn) {
+                    const postId = btn.dataset.postId;
+                    // Open modal
+                    modal.classList.add('active');
+                    body.style.overflow = 'hidden'; // Prevent background scroll
+                    // Here you would fetch comments for postId via AJAX
+                    console.log('Open comments for post:', postId);
+                }
+
+                // Close modal
+                if (e.target === modal || e.target === closeBtn) {
+                    modal.classList.remove('active');
+                    body.style.overflow = '';
+                }
+            });
+        })();
+    </script>
+
     <script>
         const postClose = document.getElementById("exit");
         const postMain = document.querySelector('.post-main');
@@ -207,15 +412,15 @@ require_once __DIR__ . '/config/session.php';
     <script>
         // Set global user ID for post events
         window.CURRENT_USER_ID = <?php echo (int)($_SESSION['user_id'] ?? 0); ?>;
-        
+
         const feedContainer = document.getElementById('feed-container');
         const tabButtons = document.querySelectorAll('.tabs .tab');
 
         async function loadFeed(tabType) {
             try {
                 feedContainer.innerHTML = '<p style="text-align: center; color: #6b7280;">Đang tải...</p>';
-                
-                const response = await fetch('/DunWeb/api/feed.php?tab=' + encodeURIComponent(tabType), {
+
+                const response = await fetch('controllers/post.controller.php?action=feed&tab=' + encodeURIComponent(tabType), {
                     credentials: 'same-origin'
                 });
 
@@ -238,7 +443,7 @@ require_once __DIR__ . '/config/session.php';
         tabButtons.forEach(btn => {
             btn.addEventListener('click', () => {
                 const tabType = btn.dataset.tab;
-                
+
                 // Update active state
                 tabButtons.forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');

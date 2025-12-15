@@ -23,13 +23,51 @@ $user = $result->fetch_assoc();
     <title>Chỉnh sửa trang cá nhân</title>
     <link rel="stylesheet" href="src/css/edit.css">
     <link rel="shortcut icon" href="src/img/logodun.png" type="image/x-icon">
+    <style>
+        .avatar-upload {
+            position: relative;
+            width: 120px;
+            height: 120px;
+            margin: 0 auto 20px;
+            cursor: pointer;
+        }
+        .avatar-preview {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid #0078d4;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+        .avatar-edit-icon {
+            position: absolute;
+            bottom: 5px;
+            right: 5px;
+            background: #0078d4;
+            color: #fff;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            border: 2px solid #fff;
+        }
+    </style>
 </head>
 
 <body>
     <div class="form-container">
         <h2>Chỉnh sửa trang cá nhân</h2>
-        <form action="controllers/user.controller.php?action=update" method="POST" id="editForm">
+        <form action="controllers/user.controller.php?action=update" method="POST" id="editForm" enctype="multipart/form-data">
             <input type="hidden" name="id" value="<?php echo $user['iduser']; ?>">
+
+            <div class="avatar-upload" onclick="document.getElementById('avatarInput').click()">
+                <img src="<?php echo !empty($user['avt']) ? htmlspecialchars($user['avt']) : 'src/img/user.png'; ?>" id="avatarPreview" class="avatar-preview" alt="Avatar">
+                <div class="avatar-edit-icon">✏️</div>
+                <input type="file" name="avatar" id="avatarInput" style="display: none;" accept="image/*">
+            </div>
 
             <label for="name">Họ và tên</label>
             <input type="text" id="name" name="name" value="<?php echo htmlspecialchars($user['name']); ?>" required>
@@ -59,6 +97,15 @@ $user = $result->fetch_assoc();
 </body>
 
 <script>
+    // Preview avatar
+    const avatarInput = document.getElementById('avatarInput');
+    const avatarPreview = document.getElementById('avatarPreview');
+    avatarInput.addEventListener('change', function() {
+        if (this.files && this.files[0]) {
+            avatarPreview.src = URL.createObjectURL(this.files[0]);
+        }
+    });
+
     // Handle form submission and redirect on success
     document.getElementById('editForm').addEventListener('submit', async (e) => {
         e.preventDefault();

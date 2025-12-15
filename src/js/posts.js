@@ -17,39 +17,66 @@ window.initPostEventListeners = function() {
         });
     }
 
-    function openCommentModal(postId, postTitle, postContent) {
-        let modal = document.getElementById('comment-modal');
-        if (!modal) {
-            modal = document.createElement('div');
-            modal.id = 'comment-modal';
-            modal.style.position = 'fixed';
-            modal.style.left = '0';
-            modal.style.top = '0';
-            modal.style.right = '0';
-            modal.style.bottom = '0';
-            modal.style.background = 'rgba(0,0,0,0.5)';
-            modal.style.display = 'flex';
-            modal.style.alignItems = 'center';
-            modal.style.justifyContent = 'center';
-            modal.innerHTML = `
-                <div style="width:90%;max-width:800px;background:#fff;border-radius:8px;padding:16px;max-height:90vh;overflow:auto;">
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-                        <h3 id="cmt-post-title" style="margin:0"></h3>
-                        <button id="cmt-close" style="border:0;background:transparent;font-size:20px;cursor:pointer">✕</button>
-                    </div>
-                    <div id="cmt-post-content" style="color:#374151;margin-bottom:12px"></div>
-                    <div id="cmt-list" style="margin-bottom:12px"></div>
-                    <div id="cmt-form-wrap"></div>
-                </div>`;
-            document.body.appendChild(modal);
-            document.getElementById('cmt-close').addEventListener('click', () => {
-                modal.style.display = 'none';
+    // Setup global send button listener once
+    const sendBtn = document.getElementById('send-comment');
+    const commentInput = document.getElementById('comment-input');
+    
+    if (sendBtn && !sendBtn.dataset.hasListener) {
+        sendBtn.dataset.hasListener = 'true';
+        sendBtn.addEventListener('click', () => {
+            const postId = sendBtn.dataset.currentPostId;
+            const content = commentInput.value.trim();
+            if (!postId || !content) return;
+            if (!CURRENT_USER_ID) {
+                alert('Vui lòng đăng nhập');
+                return;
+            }
+
+            const fd = new URLSearchParams();
+            fd.append('action', 'add');
+            fd.append('post_id', postId);
+            fd.append('content', content);
+
+            fetch('/DunWeb/controllers/comment.controller.php', {
+                method: 'POST',
+                body: fd,
+                credentials: 'same-origin'
+            })
+            .then(r => r.json())
+            .then(resp => {
+                if (resp.status === 'ok') {
+                    commentInput.value = '';
+                    // Refresh comments
+                    openCommentModal(postId);
+                } else {
+                    alert(resp.msg || 'Lỗi gửi bình luận');
+                }
+            });
+        });
+        
+        if (commentInput) {
+            commentInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') sendBtn.click();
             });
         }
-        modal.style.display = 'flex';
-        document.getElementById('cmt-post-title').textContent = postTitle || 'Bài viết';
-        document.getElementById('cmt-post-content').textContent = postContent || '';
-        document.getElementById('cmt-list').innerHTML = '<p class="muted">Đang tải bình luận…</p>';
+    }
+
+    function openCommentModal(postId) {
+        const modal = document.getElementById('comment-modal');
+        const listWrap = document.getElementById('comment-body');
+        const countSpan = document.querySelector(`.comment-count[data-post-id="${postId}"]`);
+
+        if (!modal || !listWrap) return;
+
+        // Set current post ID for send button
+        if (sendBtn) sendBtn.dataset.currentPostId = postId;
+
+        // Show modal (using class to match index.php logic)
+        modal.classList.add('active');
+        document.body.style.overflow = 'hidden';
+
+        // Reset list
+        listWrap.innerHTML = '<div class="loading-spinner"></div>';
 
         fetch('/DunWeb/controllers/comment.controller.php?action=list_json&post_id=' + encodeURIComponent(postId), {
             credentials: 'same-origin'
@@ -57,73 +84,32 @@ window.initPostEventListeners = function() {
             .then(async r => {
                 const text = await r.text();
                 try {
-                    const json = JSON.parse(text === '' ? '[]' : text);
-                    return { ok: r.ok, json };
+                    return JSON.parse(text === '' ? '[]' : text);
                 } catch (e) {
                     console.error('Comment list parse error:', e, 'raw:', text);
-                    throw new Error('Invalid JSON from server');
+                    return [];
                 }
             })
-            .then(({ ok, json: arr }) => {
-                const wrap = document.getElementById('cmt-list');
+            .then(arr => {
                 if (!arr || arr.length === 0) {
-                    wrap.innerHTML = '<p class="muted">Chưa có bình luận nào.</p>';
+                    listWrap.innerHTML = '<div class="empty-state"><p>Chưa có bình luận nào. Hãy là người đầu tiên!</p></div>';
                 } else {
-                    wrap.innerHTML = arr.map(c => `<div style="padding:8px;border-bottom:1px solid #eee"><strong>${escapeHtml(c.username)}</strong> <span style="color:#6b7280;font-size:12px">${c.created_at}</span><div style="margin-top:6px">${escapeHtml(c.content)}</div></div>`).join('');
+                    listWrap.innerHTML = arr.map(c => `
+                        <div style="padding:12px 0;border-bottom:1px solid #f0f0f0;">
+                            <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+                                <strong style="font-size:14px;">${escapeHtml(c.username)}</strong>
+                                <span style="font-size:12px;color:#888;">${c.created_at}</span>
+                            </div>
+                            <div style="font-size:14px;color:#333;line-height:1.4;">${escapeHtml(c.content)}</div>
+                        </div>
+                    `).join('');
                 }
-                const countSpan = document.querySelector('.comment-count[data-post-id="' + postId + '"]');
-                if (countSpan) countSpan.textContent = (arr ? arr.length : 0);
+                if (countSpan) countSpan.textContent = arr.length;
             })
             .catch(err => {
                 console.error('Failed to load comments for post', postId, err);
-                document.getElementById('cmt-list').innerHTML = '<p class="muted">Không thể tải bình luận.</p>';
+                listWrap.innerHTML = '<p style="color:red;text-align:center">Lỗi tải bình luận.</p>';
             });
-
-        const formWrap = document.getElementById('cmt-form-wrap');
-        if (CURRENT_USER_ID) {
-            formWrap.innerHTML = `
-                <form id="cmt-form">
-                    <textarea id="cmt-input" rows="3" style="width:100%;padding:8px;margin-bottom:8px" placeholder="Viết bình luận..."></textarea>
-                    <div style="text-align:right"><button type="submit" class="btn primary">Gửi</button></div>
-                </form>`;
-            const f = document.getElementById('cmt-form');
-            f.addEventListener('submit', function(e) {
-                e.preventDefault();
-                const txt = document.getElementById('cmt-input').value.trim();
-                if (!txt) return;
-                const fd = new URLSearchParams();
-                fd.append('action', 'add');
-                fd.append('post_id', postId);
-                fd.append('content', txt);
-                fetch('/DunWeb/controllers/comment.controller.php', {
-                    method: 'POST',
-                    body: fd,
-                    credentials: 'same-origin'
-                })
-                    .then(r => r.json())
-                    .then(resp => {
-                        if (resp && resp.status === 'ok' && resp.comment) {
-                            const wrap = document.getElementById('cmt-list');
-                            const node = document.createElement('div');
-                            node.style.padding = '8px';
-                            node.style.borderBottom = '1px solid #eee';
-                            node.innerHTML = `<strong>${escapeHtml(resp.comment.username)}</strong> <span style="color:#6b7280;font-size:12px">${resp.comment.created_at}</span><div style="margin-top:6px">${escapeHtml(resp.comment.content)}</div>`;
-                            if (wrap.firstChild) wrap.insertBefore(node, wrap.firstChild);
-                            else wrap.appendChild(node);
-                            const s = document.querySelector('.comment-count[data-post-id="' + postId + '"]');
-                            if (s) s.textContent = (parseInt(s.textContent || '0', 10) + 1).toString();
-                            document.getElementById('cmt-input').value = '';
-                        } else {
-                            alert('Không thể gửi bình luận.');
-                        }
-                    }).catch(err => {
-                        console.error(err);
-                        alert('Lỗi mạng.');
-                    });
-            });
-        } else {
-            formWrap.innerHTML = '<p class="muted">Vui lòng đăng nhập để bình luận.</p>';
-        }
     }
 
     // Follow/unfollow logic
@@ -294,17 +280,19 @@ window.initPostEventListeners = function() {
         const postWrap = span.closest('.comment-btn');
         const postId = postWrap ? postWrap.dataset.postId : null;
         if (!postId) return;
-        span.dataset.postId = postId;
+        
+        // Avoid duplicate listeners
+        if (postWrap.dataset.listenerAttached) return;
+        postWrap.dataset.listenerAttached = 'true';
+
         fetch('/DunWeb/controllers/comment.controller.php?action=count&post_id=' + encodeURIComponent(postId), {
             credentials: 'same-origin'
         })
             .then(async r => {
                 const text = await r.text();
                 try {
-                    const json = JSON.parse(text === '' ? '{"count":0}' : text);
-                    return json;
+                    return JSON.parse(text === '' ? '{"count":0}' : text);
                 } catch (e) {
-                    console.error('Count parse error for post', postId, e, 'raw:', text);
                     return { count: 0 };
                 }
             })
@@ -314,11 +302,9 @@ window.initPostEventListeners = function() {
             .catch(err => {
                 console.error('Count fetch error', err);
             });
-        postWrap.addEventListener('click', function() {
-            const card = this.closest('.post-card');
-            const title = card ? (card.querySelector('.post-title')?.textContent || '') : '';
-            const content = card ? (card.querySelector('p')?.textContent || '') : '';
-            openCommentModal(postId, title, content);
+        postWrap.addEventListener('click', function(e) {
+            e.stopPropagation();
+            openCommentModal(postId);
         });
     });
 
@@ -326,60 +312,70 @@ window.initPostEventListeners = function() {
     document.querySelectorAll('.like-btn').forEach(container => {
         const postId = container.dataset.postId;
         const img = container.querySelector('img.like');
-        const countSpan = container.querySelector('.islike');
+        // Sửa selector từ .islike thành .like-count để khớp với post-card.php
+        const countSpan = container.querySelector('.like-count');
         if (!postId || !img || !countSpan) return;
 
-        async function refresh() {
-            try {
-                const res = await fetch(`/DunWeb/controllers/like.controller.php?action=check&post_id=${postId}`, {
-                    credentials: 'same-origin'
-                });
-                const data = await res.json();
-                if (data.ok) {
-                    if (data.liked) {
-                        img.classList.add('liked');
-                        img.src = '/DunWeb/src/img/liked.png';
-                    } else {
-                        img.classList.remove('liked');
-                        img.src = '/DunWeb/src/img/like.png';
-                    }
-                }
+        // Gán sự kiện click vào cả container nút like để dễ bấm hơn
+        container.addEventListener('click', async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
 
-                const countRes = await fetch(`/DunWeb/controllers/like.controller.php?action=count&post_id=${postId}`, {
-                    credentials: 'same-origin'
-                });
-                const countData = await countRes.json();
-                if (countData.ok) countSpan.textContent = countData.count;
-            } catch (err) {
-                console.error('Like refresh error:', err);
-            }
-        }
-
-        img.addEventListener('click', async () => {
             if (!CURRENT_USER_ID) {
                 alert('Bạn cần đăng nhập để like bài viết.');
                 return;
             }
 
-            const action = img.classList.contains('liked') ? 'unlike' : 'like';
+            // Lấy trạng thái hiện tại từ data attribute (được render từ server)
+            const isLiked = container.dataset.liked == '1';
+            const action = isLiked ? 'unlike' : 'like';
+            
+            // --- Optimistic UI Update (Cập nhật giao diện ngay lập tức) ---
+            const newLikedState = !isLiked;
+            container.dataset.liked = newLikedState ? '1' : '0';
+            
+            // Đổi ảnh
+            img.src = newLikedState ? '/DunWeb/src/img/liked.png' : '/DunWeb/src/img/like.png';
+            
+            // Tăng/giảm số lượng tạm thời
+            let currentCount = parseInt(countSpan.textContent) || 0;
+            if (newLikedState) {
+                currentCount++;
+            } else {
+                currentCount = Math.max(0, currentCount - 1);
+            }
+            countSpan.textContent = currentCount;
+
+            // --- Gửi request lên server ---
             const fd = new FormData();
             fd.append('action', action);
             fd.append('post_id', postId);
 
-            const res = await fetch('/DunWeb/controllers/like.controller.php', {
-                method: 'POST',
-                body: fd,
-                credentials: 'same-origin'
-            });
-            const data = await res.json();
-            if (data.ok) {
-                img.src = data.status === 'liked' ? '/DunWeb/src/img/liked.png' : '/DunWeb/src/img/like.png';
-                countSpan.textContent = data.count;
-            } else {
-                alert(data.msg || 'Lỗi server.');
+            try {
+                const res = await fetch('/DunWeb/controllers/like.controller.php', {
+                    method: 'POST',
+                    body: fd,
+                    credentials: 'same-origin'
+                });
+                const data = await res.json();
+                
+                if (data.ok) {
+                    // Cập nhật lại số lượng chính xác từ server
+                    countSpan.textContent = data.count;
+                } else {
+                    // Nếu lỗi, hoàn tác lại giao diện
+                    console.error('Like error:', data.msg);
+                    container.dataset.liked = isLiked ? '1' : '0';
+                    img.src = isLiked ? '/DunWeb/src/img/liked.png' : '/DunWeb/src/img/like.png';
+                    // Hoàn tác số lượng (đơn giản là load lại trang hoặc tính ngược lại, ở đây ta để server sync lần sau)
+                    alert(data.msg || 'Lỗi server.');
+                }
+            } catch (err) {
+                console.error('Network error:', err);
+                // Hoàn tác khi lỗi mạng
+                container.dataset.liked = isLiked ? '1' : '0';
+                img.src = isLiked ? '/DunWeb/src/img/liked.png' : '/DunWeb/src/img/like.png';
             }
         });
-
-        refresh();
     });
 };

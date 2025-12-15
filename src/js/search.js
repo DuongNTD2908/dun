@@ -89,19 +89,27 @@
       return;
     }
 
+    // Header
+    const header = document.createElement("div");
+    header.style.padding = "8px 16px";
+    header.style.fontSize = "14px";
+    header.style.fontWeight = "600";
+    header.style.color = "#65676b";
+    header.textContent = "Gần đây";
+    dd.appendChild(header);
+
     const ul = document.createElement("ul");
     hist.forEach((h) => {
       const li = document.createElement("li");
 
       // Phần nội dung (text + ngày)
-      const contentSpan = document.createElement("span");
-      contentSpan.className = "hist-content";
-      contentSpan.innerHTML =
-        "<strong>" +
-        escapeHtml(h.query_text) +
-        '</strong><span class="meta">' +
-        h.created_at +
-        "</span>";
+      const contentDiv = document.createElement("div");
+      contentDiv.className = "hist-content";
+      contentDiv.innerHTML =
+        '<i class="fa fa-clock-o" style="margin-right:12px;color:#65676b;font-size:16px;"></i>' +
+        '<div style="display:flex;flex-direction:column;overflow:hidden;">' +
+        '<strong style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escapeHtml(h.query_text) + '</strong>' +
+        '<span style="font-size:12px;color:#65676b;">' + h.created_at + '</span></div>';
 
       // Nút xóa 'x'
       const deleteBtn = document.createElement("span");
@@ -109,11 +117,11 @@
       deleteBtn.innerHTML = "&times;"; // Ký tự 'x'
       deleteBtn.title = "Xóa mục này";
 
-      li.appendChild(contentSpan);
+      li.appendChild(contentDiv);
       li.appendChild(deleteBtn);
 
       // Sự kiện click vào nội dung -> tìm kiếm
-      contentSpan.addEventListener("click", function () {
+      contentDiv.addEventListener("click", function () {
         input.value = h.query_text;
         document.getElementById("search-form").submit();
       });

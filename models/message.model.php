@@ -101,4 +101,27 @@ class MessageModel
         $stmt->execute();
         return $stmt->get_result();
     }
+    public function searchInbox($user_id, $keyword)
+    {
+        $search = "%" . $keyword . "%";
+        $sql = "SELECT c.id AS conversation_id,
+               CASE WHEN c.user1_id = ? THEN c.user2_id ELSE c.user1_id END AS other_user_id,
+               u.username AS other_username,
+               u.name AS other_name,
+               u.avt AS other_avt,
+               (SELECT content FROM messages m WHERE m.conversation_id = c.id AND m.is_deleted = 0 ORDER BY m.sent_at DESC LIMIT 1) AS last_message,
+               (SELECT sent_at FROM messages m WHERE m.conversation_id = c.id AND m.is_deleted = 0 ORDER BY m.sent_at DESC LIMIT 1) AS last_sent_at,
+               (SELECT COUNT(*) FROM messages m WHERE m.conversation_id = c.id AND m.receiver_id = ? AND m.is_read = 0 AND m.is_deleted = 0) AS unread_count
+        FROM conversations c
+        JOIN users u ON u.iduser = (CASE WHEN c.user1_id = ? THEN c.user2_id ELSE c.user1_id END)
+        WHERE (c.user1_id = ? OR c.user2_id = ?)
+        AND (u.username LIKE ? OR u.name LIKE ?)
+        ORDER BY last_sent_at DESC";
+        
+        $stmt = $this->db->prepare($sql);
+        if (!$stmt) return false;
+        $stmt->bind_param("iiiiiss", $user_id, $user_id, $user_id, $user_id, $user_id, $search, $search);
+        $stmt->execute();
+        return $stmt->get_result();
+    }
 }

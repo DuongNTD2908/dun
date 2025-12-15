@@ -100,8 +100,12 @@ $history = $searchModel->getHistory((int)$_SESSION['user_id'], 10);
         }
 
         .result-item {
-            padding: 12px;
-            border-bottom: 1px solid #eee;
+            background: #fff;
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            border: 1px solid #eee;
         }
 
         .meta {

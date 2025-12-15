@@ -9,35 +9,6 @@
     <title>Dun - message</title>
 </head>
 
-<style>
-    .controller-nav {
-        background-color: #fff;
-        color: white;
-        display: flex;
-        align-items: center;
-        padding: 20px 16px;
-        border-radius: 12px;
-        box-shadow: 0 1px 0 rgba(0, 0, 0, 0.05);
-        font-size: 20px;
-        font-weight: bold;
-        flex-direction: column;
-        justify-content: space-between;
-    }
-
-    .controller-nav .nav-menu {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 16px;
-    }
-
-    .controller-nav .nav-menu img {
-        width: 20px;
-        height: 20px;
-        cursor: pointer;
-    }
-</style>
-
 <?php
 require_once __DIR__ . '/config/session.php';
 $currentUserId = $_SESSION['user_id'] ?? 0;
@@ -60,6 +31,9 @@ $currentUserId = $_SESSION['user_id'] ?? 0;
                 </div>
                 <div>
                     <img src="src/img/setting.png" alt="">
+                </div>
+                <div id="darkModeToggle" class="nav-item-custom" title="Chế độ tối/sáng">
+                    🌙
                 </div>
             </div>
         </div>
@@ -84,14 +58,13 @@ $currentUserId = $_SESSION['user_id'] ?? 0;
         <!-- Right: chat area -->
         <main class="chat" aria-label="Chat window">
             <div class="chat-header">
+                <button id="mobileBackBtn" class="icon-btn" style="display:none; margin-right: 8px;">←</button>
                 <div class="avatar">Đ</div>
                 <div style="flex:1">
                     <div id="chatHeaderName" style="font-weight:700">Chọn cuộc trò chuyện</div>
                     <div id="chatHeaderStatus" style="font-size:13px;color:var(--muted)">---</div>
                 </div>
                 <div style="display:flex;gap:8px">
-                    <button class="icon-btn" title="Voice">☎</button>
-                    <button class="icon-btn" title="Video">▢</button>
                     <button class="icon-btn" title="More">⋯</button>
                 </div>
             </div>
@@ -134,6 +107,8 @@ $currentUserId = $_SESSION['user_id'] ?? 0;
         const chatHeaderName = document.getElementById('chatHeaderName');
         const chatHeaderStatus = document.getElementById('chatHeaderStatus');
         const chatHeaderAvatar = document.querySelector('.chat-header .avatar');
+        const searchInput = document.querySelector('.search input');
+        const mobileBackBtn = document.getElementById('mobileBackBtn');
         const CURRENT_USER_ID = <?php echo (int)$currentUserId; ?>;
         let currentChatUserId = null; // other user's id for current conversation
         let attachedFile = null; // file selected via input / paste / drop
@@ -183,7 +158,11 @@ $currentUserId = $_SESSION['user_id'] ?? 0;
             removeBtn.type = 'button';
             removeBtn.className = 'icon-btn';
             removeBtn.textContent = '✕';
-            removeBtn.addEventListener('click', () => { attachedFile = null; fileInput.value = ''; removeAttachmentPreview(); });
+            removeBtn.addEventListener('click', () => {
+                attachedFile = null;
+                fileInput.value = '';
+                removeAttachmentPreview();
+            });
             previewEl.appendChild(label);
             previewEl.appendChild(removeBtn);
 
@@ -209,7 +188,9 @@ $currentUserId = $_SESSION['user_id'] ?? 0;
                     const blob = it.getAsFile();
                     if (blob) {
                         // create File with a sensible name
-                        const file = new File([blob], 'pasted_' + Date.now() + '.png', { type: blob.type });
+                        const file = new File([blob], 'pasted_' + Date.now() + '.png', {
+                            type: blob.type
+                        });
                         attachedFile = file;
                         showAttachmentPreview(file);
                         e.preventDefault();
@@ -221,7 +202,10 @@ $currentUserId = $_SESSION['user_id'] ?? 0;
 
         // drag & drop attachments onto compose area
         const composeArea = document.querySelector('.compose');
-        composeArea.addEventListener('dragover', (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; });
+        composeArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'copy';
+        });
         composeArea.addEventListener('drop', (e) => {
             e.preventDefault();
             const dt = e.dataTransfer;
@@ -238,8 +222,8 @@ $currentUserId = $_SESSION['user_id'] ?? 0;
         const startUserId = urlParams.get('user_id');
 
         // load inbox on start
-        function loadInbox() {
-            return fetch('controllers/message.controller.php?action=inbox')
+        function loadInbox(query = '') {
+            return fetch('controllers/message.controller.php?action=inbox' + (query ? '&q=' + encodeURIComponent(query) : ''))
                 .then(r => r.json())
                 .then(list => {
                     renderInbox(list);
@@ -247,14 +231,14 @@ $currentUserId = $_SESSION['user_id'] ?? 0;
                     if (startUserId) {
                         // prefer to open the requested user; if it's present in inbox, use its username
                         const found = list && list.find && list.find(x => String(x.other_user_id) === String(startUserId));
-                        const uname = found ? (found.other_name && found.other_name.trim() !== '' ? (found.other_name + ' (' + (found.other_username||'') + ')') : found.other_username) : '';
+                        const uname = found ? (found.other_name && found.other_name.trim() !== '' ? (found.other_name + ' (' + (found.other_username || '') + ')') : found.other_username) : '';
                         openConversation(startUserId, uname);
                         return;
                     }
                     // otherwise open first conversation if exists
                     if (list && list.length) {
                         const first = list[0];
-                        const uname = first.other_name && first.other_name.trim() !== '' ? (first.other_name + ' (' + (first.other_username||'') + ')') : first.other_username;
+                        const uname = first.other_name && first.other_name.trim() !== '' ? (first.other_name + ' (' + (first.other_username || '') + ')') : first.other_username;
                         openConversation(first.other_user_id, uname);
                     }
                 }).catch(e => console.error('Inbox load failed', e));
@@ -262,65 +246,68 @@ $currentUserId = $_SESSION['user_id'] ?? 0;
 
         function renderInbox(list) {
             chatListEl.innerHTML = '';
-                list.forEach(item => {
-                    const div = document.createElement('div');
-                    div.className = 'chat-item' + (item.unread_count && item.unread_count > 0 ? ' unread' : '');
-                    div.dataset.otherId = item.other_user_id;
+            list.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'chat-item' + (item.unread_count && item.unread_count > 0 ? ' unread' : '');
+                div.dataset.otherId = item.other_user_id;
 
-                    // avatar: prefer avatar URL from server, fallback to initial of username
-                    const avatar = document.createElement('div');
-                    avatar.className = 'avatar';
-                    if (item.other_avt && String(item.other_avt).trim() !== '') {
-                        const img = document.createElement('img');
-                        img.src = item.other_avt;
-                        img.alt = item.other_username || item.other_name || 'User';
-                        img.style.width = '100%';
-                        img.style.height = '100%';
-                        img.style.objectFit = 'cover';
-                        avatar.innerHTML = '';
-                        avatar.appendChild(img);
-                    } else {
-                        const initial = (item.other_username || item.other_name || 'U').charAt(0).toUpperCase();
-                        avatar.textContent = initial;
-                    }
+                // avatar: prefer avatar URL from server, fallback to initial of username
+                const avatar = document.createElement('div');
+                avatar.className = 'avatar';
+                if (item.other_avt && String(item.other_avt).trim() !== '') {
+                    const img = document.createElement('img');
+                    img.src = item.other_avt;
+                    img.alt = item.other_username || item.other_name || 'User';
+                    img.style.width = '100%';
+                    img.style.height = '100%';
+                    img.style.objectFit = 'cover';
+                    avatar.innerHTML = '';
+                    avatar.appendChild(img);
+                } else {
+                    const initial = (item.other_username || item.other_name || 'U').charAt(0).toUpperCase();
+                    avatar.textContent = initial;
+                }
 
-                    const info = document.createElement('div');
-                    info.className = 'chat-info';
-                    const name = document.createElement('div');
-                    name.className = 'name';
-                    // display: full name (username) if full name exists, otherwise username
-                    if (item.other_name && String(item.other_name).trim() !== '') {
-                        name.textContent = item.other_name + ' (' + (item.other_username || '') + ')';
-                    } else {
-                        name.textContent = item.other_username || '—';
-                    }
+                const info = document.createElement('div');
+                info.className = 'chat-info';
+                const name = document.createElement('div');
+                name.className = 'name';
+                // display: full name (username) if full name exists, otherwise username
+                if (item.other_name && String(item.other_name).trim() !== '') {
+                    name.textContent = item.other_name + ' (' + (item.other_username || '') + ')';
+                } else {
+                    name.textContent = item.other_username || '—';
+                }
 
-                    const meta = document.createElement('div');
-                    meta.className = 'meta';
-                    meta.textContent = (item.last_message || '').slice(0, 80);
-                    info.appendChild(name);
-                    // show unread badge if exists
-                    if (item.unread_count && item.unread_count > 0) {
-                        const badge = document.createElement('span');
-                        badge.className = 'unread-badge';
-                        badge.textContent = item.unread_count;
-                        name.appendChild(badge);
-                    }
-                    const time = document.createElement('div');
-                    time.className = 'meta';
-                    time.textContent = item.last_sent_at ? new Date(item.last_sent_at).toLocaleString() : '';
-                    info.appendChild(name);
-                    info.appendChild(meta);
-                    info.appendChild(time);
-                    div.appendChild(avatar);
-                    div.appendChild(info);
-                    div.addEventListener('click', () => openConversation(item.other_user_id, item.other_username || item.other_name));
-                    chatListEl.appendChild(div);
-                });
+                const meta = document.createElement('div');
+                meta.className = 'meta';
+                meta.textContent = (item.last_message || '').slice(0, 80);
+                info.appendChild(name);
+                // show unread badge if exists
+                if (item.unread_count && item.unread_count > 0) {
+                    const badge = document.createElement('span');
+                    badge.className = 'unread-badge';
+                    badge.textContent = item.unread_count;
+                    name.appendChild(badge);
+                }
+                const time = document.createElement('div');
+                time.className = 'meta';
+                time.textContent = item.last_sent_at ? new Date(item.last_sent_at).toLocaleString() : '';
+                info.appendChild(name);
+                info.appendChild(meta);
+                info.appendChild(time);
+                div.appendChild(avatar);
+                div.appendChild(info);
+                div.addEventListener('click', () => openConversation(item.other_user_id, item.other_username || item.other_name));
+                chatListEl.appendChild(div);
+            });
         }
 
         function openConversation(otherId, otherName) {
             currentChatUserId = otherId;
+            // Mobile: Show chat view
+            document.querySelector('.app').classList.add('chat-open');
+
             chatHeaderStatus.textContent = 'Đang tải...';
             messagesEl.innerHTML = '';
             fetch(`controllers/message.controller.php?action=conversation&with=${otherId}`)
@@ -332,7 +319,7 @@ $currentUserId = $_SESSION['user_id'] ?? 0;
 
                     // update header: prefer full name
                     if (meta) {
-                        const displayName = (meta.name && meta.name.trim() !== '') ? (meta.name + ' (' + (meta.username||'') + ')') : (meta.username || otherName || '—');
+                        const displayName = (meta.name && meta.name.trim() !== '') ? (meta.name + ' (' + (meta.username || '') + ')') : (meta.username || otherName || '—');
                         chatHeaderName.textContent = displayName;
                         // set avatar
                         if (meta.avt && meta.avt.trim() !== '') {
@@ -340,10 +327,12 @@ $currentUserId = $_SESSION['user_id'] ?? 0;
                             const img = document.createElement('img');
                             img.src = meta.avt;
                             img.alt = meta.username || meta.name || 'User';
-                            img.style.width = '100%'; img.style.height = '100%'; img.style.objectFit = 'cover';
+                            img.style.width = '100%';
+                            img.style.height = '100%';
+                            img.style.objectFit = 'cover';
                             chatHeaderAvatar.appendChild(img);
                         } else {
-                            chatHeaderAvatar.textContent = (meta.username || (meta.name||'')).charAt(0).toUpperCase();
+                            chatHeaderAvatar.textContent = (meta.username || (meta.name || '')).charAt(0).toUpperCase();
                         }
                     } else {
                         chatHeaderName.textContent = otherName || '—';
@@ -481,8 +470,66 @@ $currentUserId = $_SESSION['user_id'] ?? 0;
                 });
         });
 
+        // Search functionality
+        let searchTimeout;
+        searchInput.addEventListener('input', (e) => {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                loadInbox(e.target.value.trim());
+            }, 300);
+        });
+
         // initial load
         loadInbox();
+
+        // Dark Mode Logic
+        const toggleBtn = document.getElementById('darkModeToggle');
+        const body = document.body;
+
+        // Check local storage
+        if (localStorage.getItem('theme') === 'dark') {
+            body.classList.add('dark-mode');
+            toggleBtn.textContent = '☀️';
+        }
+
+        toggleBtn.addEventListener('click', () => {
+            body.classList.toggle('dark-mode');
+            const isDark = body.classList.contains('dark-mode');
+            toggleBtn.textContent = isDark ? '☀️' : '🌙';
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+        });
+
+        // Mobile responsive logic
+        function checkMobileView() {
+            if (window.innerWidth <= 768) {
+                mobileBackBtn.style.display = 'inline-flex';
+            } else {
+                mobileBackBtn.style.display = 'none';
+                document.querySelector('.app').classList.remove('chat-open');
+            }
+        }
+        window.addEventListener('resize', checkMobileView);
+        checkMobileView();
+
+        mobileBackBtn.addEventListener('click', () => {
+            document.querySelector('.app').classList.remove('chat-open');
+            currentChatUserId = null;
+        });
+        // Tạo hiệu ứng tuyết rơi (chỉ hiển thị khi có class dark-mode trong CSS)
+        (function() {
+            const colors = ['#fff', '#87CEEB', '#00BFFF'];
+            for (let i = 0; i < 25; i++) { // Số lượng ít (tần suất thấp)
+                const flake = document.createElement('div');
+                flake.className = 'snowflake';
+                flake.textContent = '.';
+                flake.style.left = Math.random() * 100 + 'vw';
+                flake.style.animationDuration = (Math.random() * 10 + 10) + 's'; // Tốc độ rơi chậm
+                flake.style.animationDelay = Math.random() * 5 + 's';
+                flake.style.fontSize = (Math.random() * 20 + 20) + 'px';
+                flake.style.color = colors[Math.floor(Math.random() * colors.length)];
+                document.body.appendChild(flake);
+            }
+        })();
     </script>
 </body>
 

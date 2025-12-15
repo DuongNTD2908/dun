@@ -40,11 +40,16 @@ class UserModel
         return $stmt->execute();
     }
 
-    public function updateUser($id, $name, $email, $phone, $dob, $gender)
+    public function updateUser($id, $name, $email, $phone, $dob, $gender, $avt = null)
     {
         // 'date' column name used in users table for birth date
-        $stmt = $this->db->prepare("UPDATE users SET name = ?, email = ?, phone = ?, `date` = ?, gender = ? WHERE iduser = ?");
-        $stmt->bind_param("sssssi", $name, $email, $phone, $dob, $gender, $id);
+        if ($avt) {
+            $stmt = $this->db->prepare("UPDATE users SET name = ?, email = ?, phone = ?, `date` = ?, gender = ?, avt = ? WHERE iduser = ?");
+            $stmt->bind_param("ssssssi", $name, $email, $phone, $dob, $gender, $avt, $id);
+        } else {
+            $stmt = $this->db->prepare("UPDATE users SET name = ?, email = ?, phone = ?, `date` = ?, gender = ? WHERE iduser = ?");
+            $stmt->bind_param("sssssi", $name, $email, $phone, $dob, $gender, $id);
+        }
         return $stmt->execute();
     }
 

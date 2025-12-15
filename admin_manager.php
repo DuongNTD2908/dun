@@ -381,6 +381,21 @@ $allUsersRes = $userModel->getAllUsers();
             border: 1px solid #ddd;
             border-radius: 6px;
         }
+
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+                margin: 10px;
+            }
+            nav.sidebar {
+                width: 100%;
+                margin-bottom: 20px;
+            }
+            .modal-content {
+                width: 90%;
+                min-width: auto;
+            }
+        }
     </style>
 </head>
 

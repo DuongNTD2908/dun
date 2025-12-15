@@ -128,3 +128,11 @@
             width: 20px;
             height: 20px;
         }
+
+        @media (max-width: 480px) {
+            .form-container {
+                width: 90%;
+                padding: 20px;
+                margin: 20px auto;
+            }
+        }

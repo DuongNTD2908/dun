@@ -32,6 +32,10 @@ switch ($action) {
             exit;
         }
         $result = $notificationModel->getNotifications($userId);
+        if ($result === false) {
+            echo json_encode(['ok' => false, 'msg' => 'Lỗi DB: ' . $dbConn->error]);
+            exit;
+        }
         $notifications = [];
         while ($row = $result->fetch_assoc()) {
             $notifications[] = $row;
@@ -49,6 +53,10 @@ switch ($action) {
             exit;
         }
         $ok = $notificationModel->addNotification($userId, $content);
+        if ($ok === false) {
+            echo json_encode(['ok' => false, 'msg' => 'Lỗi DB: ' . $dbConn->error]);
+            exit;
+        }
         echo json_encode(['ok' => $ok]);
         break;
 
@@ -61,6 +69,10 @@ switch ($action) {
             exit;
         }
         $ok = $notificationModel->deleteNotification($idnoti);
+        if ($ok === false) {
+            echo json_encode(['ok' => false, 'msg' => 'Lỗi DB: ' . $dbConn->error]);
+            exit;
+        }
         echo json_encode(['ok' => $ok]);
         break;
 

@@ -56,7 +56,12 @@ switch ($action) {
         break;
     case 'inbox':
         $user_id = $_SESSION['user_id'];
-        $conversations = $messageModel->getInbox($user_id);
+        $keyword = $_GET['q'] ?? '';
+        if ($keyword !== '') {
+            $conversations = $messageModel->searchInbox($user_id, $keyword);
+        } else {
+            $conversations = $messageModel->getInbox($user_id);
+        }
         // return JSON list for client-side rendering
         $rows = [];
         if ($conversations && $conversations instanceof mysqli_result) {

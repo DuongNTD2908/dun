@@ -48,6 +48,34 @@ switch ($action) {
             exit;
         }
         break;
+    case 'feed':
+        // Action mới để lấy feed (Recommended hoặc Following) trả về HTML
+        $tab = $_GET['tab'] ?? 'recommended';
+        $user_id = $_SESSION['user_id'] ?? 0;
+        $posts = [];
+        
+        if ($tab === 'following') {
+            if ($user_id) {
+                $result = $postModel->getFollowingPosts($user_id);
+                if ($result) {
+                    while ($row = $result->fetch_assoc()) {
+                        $posts[] = $row;
+                    }
+                }
+            }
+        } else {
+            // Recommended (mặc định)
+            $result = $postModel->getRecommendedPosts($user_id);
+            if ($result) {
+                while ($row = $result->fetch_assoc()) {
+                    $posts[] = $row;
+                }
+            }
+        }
+        
+        // Include view để render HTML
+        include __DIR__ . '/../views/post-card.php';
+        break;
     case 'detail':
         $post = $postModel->getPostById($id);
         $images = $postModel->getImagesByPost($id);

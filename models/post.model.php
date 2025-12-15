@@ -69,6 +69,53 @@ class PostModel
         return $stmt->get_result();
     }
 
+    public function getRecommendedPosts($user_id, $limit = 20)
+    {
+        // Logic:
+        // 1. Bài viết mới (trong 30 phút) lên đầu (is_new = 1)
+        // 2. Sắp xếp theo tổng tương tác (like + comment) giảm dần
+        // 3. Nếu không có tương tác, sắp xếp theo thời gian
+        $sql = "
+            SELECT 
+                p.*, 
+                t.topic_name AS topic_name, 
+                u.iduser AS user_id,
+                u.username,
+                u.name,
+                u.avt,
+                MAX(pi.image_url) AS image_url,
+                COUNT(DISTINCT l.idlike) AS likes_count,
+                COUNT(DISTINCT c.idcmt) AS comments_count,
+                (COUNT(DISTINCT l.idlike) + COUNT(DISTINCT c.idcmt)) AS total_interactions,
+                MAX(CASE WHEN l.user_id = ? THEN 1 ELSE 0 END) AS is_liked,
+                CASE 
+                    WHEN p.created_at >= NOW() - INTERVAL 30 MINUTE THEN 1 
+                    ELSE 0 
+                END AS is_new,
+                CASE 
+                    WHEN p.created_at >= NOW() - INTERVAL 2 DAY THEN 1 
+                    ELSE 0 
+                END AS is_recent
+            FROM posts p
+            LEFT JOIN topics t ON p.topic_id = t.id
+            LEFT JOIN users u ON p.user_id = u.iduser
+            LEFT JOIN likes l ON p.idpost = l.post_id
+            LEFT JOIN comments c ON p.idpost = c.post_id
+            LEFT JOIN post_images pi ON p.idpost = pi.post_id
+            GROUP BY p.idpost
+            ORDER BY 
+                is_new DESC, 
+                is_recent DESC,
+                total_interactions DESC, 
+                p.created_at DESC
+            LIMIT ?
+        ";
+        $stmt = $this->db->prepare($sql);
+        $stmt->bind_param("ii", $user_id, $limit);
+        $stmt->execute();
+        return $stmt->get_result();
+    }
+
     public function getFollowingPosts($user_id, $limit = 20)
     {
         if (!$user_id || (int)$user_id <= 0) {
@@ -85,7 +132,17 @@ class PostModel
                 u.avt,
                 MAX(pi.image_url) AS image_url,
                 COUNT(DISTINCT l.idlike) AS likes_count,
-                COUNT(DISTINCT c.idcmt) AS comments_count
+                COUNT(DISTINCT c.idcmt) AS comments_count,
+                (COUNT(DISTINCT l.idlike) + COUNT(DISTINCT c.idcmt)) AS total_interactions,
+                MAX(CASE WHEN l.user_id = ? THEN 1 ELSE 0 END) AS is_liked,
+                CASE 
+                    WHEN p.created_at >= NOW() - INTERVAL 30 MINUTE THEN 1 
+                    ELSE 0 
+                END AS is_new,
+                CASE 
+                    WHEN p.created_at >= NOW() - INTERVAL 2 DAY THEN 1 
+                    ELSE 0 
+                END AS is_recent
             FROM posts p
             LEFT JOIN topics t ON p.topic_id = t.id
             LEFT JOIN users u ON p.user_id = u.iduser
@@ -95,13 +152,19 @@ class PostModel
             WHERE p.user_id IN (
                 SELECT following_id FROM follows WHERE follower_id = ?
             )
+            AND p.user_id != ? -- Không hiển thị bài viết của chính mình
             GROUP BY p.idpost
-            ORDER BY p.created_at DESC
+            ORDER BY 
+                is_new DESC,
+                is_recent DESC,
+                total_interactions DESC,
+                p.created_at DESC
             LIMIT ?
         ";
 
         $stmt = $this->db->prepare($sql);
-        $stmt->bind_param("ii", $user_id, $limit);
+        // user_id cho is_liked, user_id cho follows, user_id để loại trừ, limit
+        $stmt->bind_param("iiii", $user_id, $user_id, $user_id, $limit);
         $stmt->execute();
         return $stmt->get_result();
     }

@@ -40,12 +40,12 @@
                 <?php endif; ?>
                 <div class="post-footer">
                     <div class="icons">
-                        <div class="like-btn" data-post-id="<?php echo (int)$post["idpost"] ?? (int)$post["id"]; ?>" style="cursor:pointer">
-                            <img class="like" src="/DunWeb/src/img/like.png" alt="" width="70%">
-                            <span class="islike">0</span>
+                        <div class="like-btn" data-post-id="<?php echo (int)$post["idpost"] ?? (int)$post["id"]; ?>" data-liked="<?php echo $post['is_liked'] ?? 0; ?>" style="cursor:pointer">
+                            <img class="like" src="<?php echo !empty($post['is_liked']) ? '/DunWeb/src/img/liked.png' : '/DunWeb/src/img/like.png'; ?>" alt="" width="70%">
+                            <span class="like-count"><?php echo $post['likes_count'] ?? 0; ?></span>
                         </div>
                         <div class="comment-btn" data-post-id="<?php echo (int)$post["idpost"] ?? (int)$post["id"]; ?>" style="cursor:pointer">
-                            <img src="/DunWeb/src/img/comment.png" alt="" width="70%"><span class="comment-count">0</span>
+                            <img src="/DunWeb/src/img/comment.png" alt="" width="70%"><span class="comment-count"><?php echo $post['comments_count'] ?? 0; ?></span>
                         </div>
                         <div class="report-btn" data-post-id="<?php echo (int)$post["idpost"] ?? (int)$post["id"]; ?>" style="cursor:pointer">
                             <img src="/DunWeb/src/img/report.png" alt="" width="70%"><span>Report</span>
