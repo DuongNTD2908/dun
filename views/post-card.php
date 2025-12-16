@@ -23,12 +23,12 @@
                     </div>
                     <?php if (isset($_SESSION["user_id"]) && $_SESSION["user_id"]): ?>
                         <?php if ((int)$_SESSION["user_id"] !== (int)$postUserId): ?>
-                            <button class="follow" data-user-id="<?php echo (int)$postUserId; ?>">Theo d?i</button>
+                            <button class="follow" data-user-id="<?php echo (int)$postUserId; ?>">Theo dõi</button>
                         <?php else: ?>
                             <!-- Do not show follow button for the post owner -->
                         <?php endif; ?>
                     <?php else: ?>
-                        <button class="follow btn-login">Theo d?i</button>
+                        <button class="follow btn-login">Theo dõi</button>
                     <?php endif; ?>
                 </div>
                 <h3 class="post-title"><?php echo htmlspecialchars($post["title"]); ?></h3>

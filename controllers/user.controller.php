@@ -498,4 +498,20 @@ switch ($action) {
             echo json_encode(['ok' => false, 'msg' => 'Lưu thất bại']);
         }
         exit;
+
+    case 'update_bio':
+        $userId = $_SESSION['user_id'] ?? 0;
+        if (!$userId) {
+            echo json_encode(['ok' => false, 'msg' => 'Vui lòng đăng nhập']);
+            exit;
+        }
+        $bio = $_POST['bio'] ?? '';
+        // Limit bio length to 500 chars
+        if (mb_strlen($bio) > 500) {
+            echo json_encode(['ok' => false, 'msg' => 'Tiểu sử quá dài (tối đa 500 ký tự)']);
+            exit;
+        }
+        $ok = $userModel->updateBio($userId, $bio);
+        echo json_encode(['ok' => $ok, 'bio' => nl2br(htmlspecialchars($bio))]);
+        exit;
 }

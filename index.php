@@ -137,6 +137,9 @@ require_once __DIR__ . '/config/session.php';
             </div>
         </div>
         <img src="src/img/noel-tree.png" alt="Noel Tree" class="welcome-noel-tree">
+        <img src="src/img/noelbox1.png" alt="Noel Box" class="welcome-box1">
+        <img src="src/img/noelbox2.png" alt="Noel Box" class="welcome-box2">
+        <img src="src/img/jingle.png" alt="Jingle" class="welcome-jingle">
     </div>
     <style>
         .welcome-modal {
@@ -198,9 +201,35 @@ require_once __DIR__ . '/config/session.php';
 
         .welcome-noel-tree {
             position: absolute;
-            width: 300px;
+            width: 25%;
             bottom: 0;
             right: 0;
+        }
+
+        .welcome-jinglebell {
+            position: absolute;
+            width: 10%;
+            top: 40px;
+            z-index: 1;
+        }
+
+        .welcome-jingle {
+            position: absolute;
+            width: 80%;
+            top: 0;
+        }
+
+        .welcome-box1{
+            position: absolute;
+            bottom: 0;
+            right: 20%;
+            width: 10%;
+        }
+        .welcome-box2{
+            position: absolute;
+            bottom: 0;
+            left: 20%;
+            width: 15%;
         }
 
         #welcome-next {

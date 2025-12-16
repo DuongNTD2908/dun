@@ -96,7 +96,23 @@ if ($res && $res instanceof mysqli_result) {
                 <div class="card">
                     <h3>Giới thiệu</h3>
                     <!-- users.bio -->
-                    <p style="margin:0 0 8px 0; color:var(--muted);"><?php echo nl2br(htmlspecialchars($profile['bio'] ?? '')); ?></p>
+                    <div id="bio-display-area">
+                        <p id="bio-content" style="margin:0 0 8px 0; color:var(--muted); word-wrap: break-word;"><?php echo !empty($profile['bio']) ? nl2br(htmlspecialchars($profile['bio'])) : '<span style="font-style:italic; opacity:0.7">Chưa có tiểu sử</span>'; ?></p>
+                        <?php if ($currentUserId && $currentUserId === $profileId): ?>
+                            <button id="btn-edit-bio" class="btn" style="width:100%; margin-top:8px; background:#e4e6eb; color:#050505; font-weight:600; font-size:14px; border:none; padding: 6px;">Chỉnh sửa tiểu sử</button>
+                        <?php endif; ?>
+                    </div>
+
+                    <?php if ($currentUserId && $currentUserId === $profileId): ?>
+                        <div id="bio-edit-form" style="display:none; margin-top:10px;">
+                            <textarea id="bio-input" rows="4" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ccc; font-family:inherit; resize: vertical; box-sizing: border-box;" placeholder="Mô tả ngắn về bản thân..."><?php echo htmlspecialchars($profile['bio'] ?? ''); ?></textarea>
+                            <div style="text-align:right; margin-top:8px;">
+                                <button id="btn-cancel-bio" class="btn" style="background:#e4e6eb; color:#050505; margin-right:5px;">Hủy</button>
+                                <button id="btn-save-bio" class="btn primary">Lưu</button>
+                            </div>
+                        </div>
+                    <?php endif; ?>
+
                     <!-- users.date users.gender users.create_at(chỉ lấy ngày tháng năm) -->
                     <?php if (!empty($profile['date']) || !empty($profile['gender']) || !empty($profile['location'])): ?>
                         <?php if (!empty($profile['date'])): ?>
@@ -183,6 +199,49 @@ if ($res && $res instanceof mysqli_result) {
                     alert('Lỗi mạng. Vui lòng thử lại.');
                 }
             });
+        })();
+
+        // Bio Edit Logic
+        (function() {
+            const btnEdit = document.getElementById('btn-edit-bio');
+            const form = document.getElementById('bio-edit-form');
+            const displayArea = document.getElementById('bio-display-area');
+            const btnCancel = document.getElementById('btn-cancel-bio');
+            const btnSave = document.getElementById('btn-save-bio');
+            const input = document.getElementById('bio-input');
+            const content = document.getElementById('bio-content');
+
+            if (btnEdit) {
+                btnEdit.addEventListener('click', () => {
+                    displayArea.style.display = 'none';
+                    form.style.display = 'block';
+                    input.focus();
+                });
+
+                btnCancel.addEventListener('click', () => {
+                    form.style.display = 'none';
+                    displayArea.style.display = 'block';
+                    // Reset input to current displayed value (optional, but good UX)
+                    // input.value = ... (complex due to nl2br, skipping reset to keep draft)
+                });
+
+                btnSave.addEventListener('click', async () => {
+                    const newBio = input.value.trim();
+                    const formData = new FormData();
+                    formData.append('action', 'update_bio');
+                    formData.append('bio', newBio);
+
+                    const res = await fetch('controllers/user.controller.php', { method: 'POST', body: formData });
+                    const data = await res.json();
+                    if (data.ok) {
+                        content.innerHTML = data.bio || '<span style="font-style:italic; opacity:0.7">Chưa có tiểu sử</span>';
+                        form.style.display = 'none';
+                        displayArea.style.display = 'block';
+                    } else {
+                        alert(data.msg || 'Lỗi cập nhật');
+                    }
+                });
+            }
         })();
     </script>
     <script src="src/js/login.js"></script>

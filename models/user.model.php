@@ -187,4 +187,11 @@ class UserModel
         $stmt->bind_param("ii", $status, $id);
         return $stmt->execute();
     }
+
+    public function updateBio($id, $bio)
+    {
+        $stmt = $this->db->prepare("UPDATE users SET bio = ? WHERE iduser = ?");
+        $stmt->bind_param("si", $bio, $id);
+        return $stmt->execute();
+    }
 }
